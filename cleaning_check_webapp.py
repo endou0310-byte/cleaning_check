@@ -15,6 +15,16 @@ from db import get_monthly_usage, month_key, query_monthly_kpi, query_monthly_jo
 from services import run_analysis_and_record
 from chatgpt_cleaning_check import export_csv, export_json, export_zip_ng, export_zip_ok, render_image_grid
 
+# （任意）StreamlitのSecrets→環境変数ブリッジ
+try:
+    import streamlit as st
+    for k in ("OPENAI_API_KEY","OPENAI_ORG","OPENAI_PROJECT"):
+        if k in st.secrets and st.secrets[k]:
+            os.environ[k] = str(st.secrets[k]).strip()
+except Exception:
+    pass
+
+
 # === ユーティリティ ===
 def _load_json(path: str, default):
     try:
@@ -67,9 +77,19 @@ def _load_global_recheck() -> List[str]:
 def _save_global_recheck(items: List[str]):
     _dump_json(GLOBAL_RECHECKWL, items)
 
+# --- 既存：APIキー読取（strip付き）
 def _load_api_key_from_config() -> str:
     cfg = _load_json(CONFIG_JSON, {})
     return (cfg or {}).get("openai_api_key", "").strip()
+
+# ★ 追加：projキー運用のため org/project も読む
+def _load_api_creds_from_config() -> Dict[str, str]:
+    cfg = _load_json(CONFIG_JSON, {}) or {}
+    return {
+        "api_key":  (cfg.get("openai_api_key") or "").strip(),
+        "org":      (cfg.get("openai_org") or "").strip(),
+        "project":  (cfg.get("openai_project") or "").strip(),
+    }
 
 def _jobs_dir(uid: str, prop: str) -> str:
     d = os.path.join(SAVE_ROOT, uid, prop)
@@ -277,10 +297,16 @@ if run_btn:
         st.error("この物件の今月の画像上限を超えています。")
         st.stop()
 
-    openai_key = _load_api_key_from_config()
+    # ★ ここで config.json から org/project を含むクレデンシャルを取得 → 環境変数へ
+    creds = _load_api_creds_from_config()
+    openai_key = creds["api_key"]
     if not openai_key:
         st.error("APIキーが未設定です。storage/config.json に {\"openai_api_key\":\"sk-...\"} を保存してください。")
         st.stop()
+    if creds["org"]:
+        os.environ["OPENAI_ORG"] = creds["org"]
+    if creds["project"]:
+        os.environ["OPENAI_PROJECT"] = creds["project"]
 
     thresholds = {
         "NANO_OK_TH": 0.20,
@@ -479,7 +505,7 @@ if current_role == "admin":
             _save_global_recheck(items); st.success("RECHECK_WHITELISTを保存しました。")
 
         st.subheader("OpenAI APIキー（storage/config.json）")
-        st.code('{\n  "openai_api_key": "sk-ここにキー"\n}', language="json")
+        st.code('{\n  "openai_api_key": "sk-ここにキー",\n  "openai_org": "org_xxx（任意）",\n  "openai_project": "proj_xxx（任意）"\n}', language="json")
         show_key = _load_api_key_from_config()
         masked = ("****" + show_key[-6:]) if show_key else "(未設定)"
         st.text(f"現在の設定: {masked}")

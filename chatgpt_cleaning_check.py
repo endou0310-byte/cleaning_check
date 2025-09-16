@@ -138,13 +138,26 @@ def force_recheck_by_text(verdict: str, comments: List[str], recheck_words: List
             return "unknown"
     return verdict
 
-
 # ===== OpenAI クライアント =====
 class OpenAIClient:
     def __init__(self, model_name: str, api_key: Optional[str]):
         from openai import OpenAI
         self.model_name = (model_name or "").strip()
-        self._client = OpenAI(api_key=api_key) if api_key else None
+
+        # projキーでも動くように環境変数から org / project を拾う
+        api_key = (api_key or "").strip()
+        org  = (os.getenv("OPENAI_ORG") or os.getenv("OPENAI_ORGANIZATION") or "").strip()
+        proj = (os.getenv("OPENAI_PROJECT") or "").strip()
+
+        kwargs = {}
+        if api_key:
+            kwargs["api_key"] = api_key
+        if org:
+            kwargs["organization"] = org
+        if proj:
+            kwargs["project"] = proj
+
+        self._client = OpenAI(**kwargs) if api_key else None
 
     def available(self) -> bool:
         return (self._client is not None) and bool(self.model_name)
