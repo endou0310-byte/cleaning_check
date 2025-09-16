@@ -1,7 +1,7 @@
-streamlit
-openai
+streamlit>=1.36
+openai>=1.40
 pillow
-pillow-heif
-tenacity
 numpy
-opencv-python-headless
+tenacity
+pillow-heif   # HEIC対応（wheelが入ればOK。入らなくてもtry/exceptでスキップされます）
+opencv-python-headless  # 任意：入らなくても起動はします（画質フラグだけ無効化）
