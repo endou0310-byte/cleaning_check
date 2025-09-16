@@ -1,0 +1,7 @@
+streamlit
+openai
+pillow
+pillow-heif
+tenacity
+numpy
+opencv-python-headless
