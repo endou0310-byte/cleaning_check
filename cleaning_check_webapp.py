@@ -79,16 +79,27 @@ def _save_global_recheck(items: List[str]):
 
 # --- 既存：APIキー読取（strip付き）
 def _load_api_key_from_config() -> str:
+    # まず環境変数（Secrets → 環境変数ブリッジ済み）を優先
+    env_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if env_key:
+        return env_key
+    # なければ config.json
     cfg = _load_json(CONFIG_JSON, {})
     return (cfg or {}).get("openai_api_key", "").strip()
 
 # ★ 追加：projキー運用のため org/project も読む
 def _load_api_creds_from_config() -> Dict[str, str]:
+    # まず環境変数を参照（Secrets から来た値を優先）
+    env_api  = (os.environ.get("OPENAI_API_KEY") or "").strip()
+    env_org  = (os.environ.get("OPENAI_ORG") or os.environ.get("OPENAI_ORGANIZATION") or "").strip()
+    env_proj = (os.environ.get("OPENAI_PROJECT") or "").strip()
+
+    # 次に config.json をフォールバック
     cfg = _load_json(CONFIG_JSON, {}) or {}
     return {
-        "api_key":  (cfg.get("openai_api_key") or "").strip(),
-        "org":      (cfg.get("openai_org") or "").strip(),
-        "project":  (cfg.get("openai_project") or "").strip(),
+        "api_key":  env_api  or (cfg.get("openai_api_key") or "").strip(),
+        "org":      env_org  or (cfg.get("openai_org") or "").strip(),
+        "project":  env_proj or (cfg.get("openai_project") or "").strip(),
     }
 
 def _jobs_dir(uid: str, prop: str) -> str:
