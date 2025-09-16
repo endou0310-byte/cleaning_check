@@ -69,7 +69,7 @@ def _save_global_recheck(items: List[str]):
 
 def _load_api_key_from_config() -> str:
     cfg = _load_json(CONFIG_JSON, {})
-    return (cfg or {}).get("openai_api_key", "")
+   return (cfg or {}).get("openai_api_key", "").strip()
 
 def _jobs_dir(uid: str, prop: str) -> str:
     d = os.path.join(SAVE_ROOT, uid, prop)
